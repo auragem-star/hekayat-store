@@ -218,10 +218,14 @@
   }
 
   /* ---------------- renderers */
+  function numLabel(b) {
+    var s = series(b.series);
+    return s && s.standalone ? "قصة منفردة" : "الكتاب " + b.num;
+  }
   function bookCard(b) {
     return '<article class="book" style="--tint:' + esc(b.tint) + '">' +
       '<a class="cover-link" href="book.html?id=' + esc(b.id) + '"><img src="' + esc(b.cover) + '" alt="غلاف ' + esc(b.title) + '" loading="lazy" width="420" height="594"></a>' +
-      '<div class="info"><div class="num">الكتاب ' + b.num + '</div><h3><a href="book.html?id=' + esc(b.id) + '">' + esc(b.title) + '</a></h3><p class="tag">' + esc(b.tagline) + '</p></div>' +
+      '<div class="info"><div class="num">' + numLabel(b) + '</div><h3><a href="book.html?id=' + esc(b.id) + '">' + esc(b.title) + '</a></h3><p class="tag">' + esc(b.tagline) + '</p></div>' +
       '<div class="row"><span class="price">' + money(b.price) + '</span>' +
       '<span style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-small" href="book.html?id=' + esc(b.id) + '">التفاصيل</a>' +
       '<button class="btn btn-small btn-primary" type="button" data-add="' + esc(b.id) + '">أضف للسلة</button></span></div></article>';
@@ -231,7 +235,7 @@
     var items = s.bundle.items.map(book);
     var full = items.reduce(function (a, b) { return a + b.price; }, 0);
     return '<div class="bundle"><div class="fan">' + items.map(function (b) { return '<img src="' + esc(b.cover) + '" alt="" loading="lazy">'; }).join("") + '</div>' +
-      '<div><h3>' + esc(s.bundle.title) + '</h3><p>كل قصص ' + esc(s.name) + ' مع بعض، بسعر أقل من شرائهم واحدة واحدة.</p>' +
+      '<div><h3>' + esc(s.bundle.title) + '</h3><p>' + esc(s.bundle.blurb || ('كل قصص ' + s.name + ' مع بعض، بسعر أقل من شرائهم واحدة واحدة.')) + '</p>' +
       '<div class="row"><span class="price">' + money(s.bundle.price) + '<s>' + money(full) + '</s></span>' +
       '<button class="btn btn-primary" type="button" data-add-bundle="' + esc(s.id) + '">أضف الباقة للسلة</button></div></div></div>';
   }
@@ -261,7 +265,7 @@
     host.innerHTML =
       '<p class="crumb"><a href="index.html#stories">كل القصص</a> / ' + esc(s ? s.name : "") + '</p>' +
       '<div class="detail"><img class="cover" src="' + esc(b.cover) + '" alt="غلاف ' + esc(b.title) + '" width="420" height="594">' +
-      '<div><div class="num">' + esc(s ? s.name : "") + ' · الكتاب ' + b.num + '</div><h1>' + esc(b.title) + '</h1><p class="tag">' + esc(b.tagline) + '</p>' +
+      '<div><div class="num">' + esc(s ? s.name : "") + ' · ' + numLabel(b) + '</div><h1>' + esc(b.title) + '</h1><p class="tag">' + esc(b.tagline) + '</p>' +
       '<ul class="facts"><li>لسن ' + esc(b.age) + '</li><li>' + b.pages + ' صفحة A4</li><li>' + b.storyPages + ' صفحة قصة للتلوين</li><li>ملف PDF تطبعه في البيت</li></ul>' +
       '<p class="summary">' + esc(b.summary) + '</p>' +
       '<div class="buy"><span class="price">' + money(b.price) + '</span><button class="btn btn-primary" type="button" data-add="' + esc(b.id) + '">أضف للسلة</button></div>' +
