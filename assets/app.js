@@ -234,7 +234,7 @@
     if (!s.bundle) return "";
     var items = s.bundle.items.map(book);
     var full = items.reduce(function (a, b) { return a + b.price; }, 0);
-    return '<div class="bundle"><div class="fan">' + items.map(function (b) { return '<img src="' + esc(b.cover) + '" alt="" loading="lazy">'; }).join("") + '</div>' +
+    return '<div class="bundle"><div class="fan' + (items.length > 3 ? ' many' : '') + '">' + items.map(function (b) { return '<img src="' + esc(b.cover) + '" alt="" loading="lazy">'; }).join("") + '</div>' +
       '<div><h3>' + esc(s.bundle.title) + '</h3><p>' + esc(s.bundle.blurb || ('كل قصص ' + s.name + ' مع بعض، بسعر أقل من شرائهم واحدة واحدة.')) + '</p>' +
       '<div class="row"><span class="price">' + money(s.bundle.price) + '<s>' + money(full) + '</s></span>' +
       '<button class="btn btn-primary" type="button" data-add-bundle="' + esc(s.id) + '">أضف الباقة للسلة</button></div></div></div>';

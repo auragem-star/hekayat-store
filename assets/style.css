@@ -181,6 +181,12 @@ p { margin: 0; }
 .bundle .fan img:nth-child(1) { transform: rotate(6deg) translateX(-14px); }
 .bundle .fan img:nth-child(2) { transform: translateY(-8px); z-index: 1; position: relative; }
 .bundle .fan img:nth-child(3) { transform: rotate(-6deg) translateX(14px); }
+.bundle .fan.many img { width: 24%; max-width: 124px; margin-inline: -2.2%; position: relative; }
+.bundle .fan.many img:nth-child(1) { transform: rotate(10deg) translateY(12px); z-index: 0; }
+.bundle .fan.many img:nth-child(2) { transform: rotate(5deg) translateY(2px); z-index: 1; }
+.bundle .fan.many img:nth-child(3) { transform: translateY(-6px); z-index: 2; }
+.bundle .fan.many img:nth-child(4) { transform: rotate(-5deg) translateY(2px); z-index: 1; }
+.bundle .fan.many img:nth-child(5) { transform: rotate(-10deg) translateY(12px); z-index: 0; }
 .bundle .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
 @media (min-width: 860px) { .bundle { grid-template-columns: 1fr 1.1fr; padding: 28px 34px; } }
 
