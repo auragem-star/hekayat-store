@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>إدارة التقييمات | حكايات ملوّنة</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .adm { max-width: 860px; margin: 0 auto; padding: 30px 16px 60px; }
+  .adm h1 { margin-bottom: 14px; }
+  .adm .key { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .adm .key input { flex: 1; min-width: 200px; font: inherit; border: 2px solid #000; border-radius: 12px; padding: 10px 14px; }
+  .adm h2 { margin: 24px 0 8px; font-size: 1.3rem; }
+  .adm .row { display: flex; justify-content: space-between; gap: 12px; align-items: start; border: 2px solid #000; border-radius: 14px; padding: 10px 14px; margin-bottom: 8px; background: #fff; }
+  .adm .row p { margin: 4px 0 0; overflow-wrap: anywhere; }
+  .adm .muted { color: #5d5f66; font-size: .9rem; }
+</style>
+</head>
+<body>
+<main class="adm">
+  <h1>إدارة التقييمات</h1>
+  <p class="muted">الصفحة دي ليك انت بس. اكتب كلمة السر علشان تشوف كل التقييمات وتمسح أي تقييم مش مناسب.</p>
+  <div class="key"><input id="key" type="password" placeholder="كلمة السر" autocomplete="current-password"><button class="btn btn-primary" id="load" type="button">اعرض التقييمات</button></div>
+  <p class="muted" id="msg" role="status"></p>
+  <div id="out"></div>
+</main>
+<script src="assets/data.js"></script>
+<script>
+(function () {
+  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var title = function (id) { var b = (window.BOOKS || []).filter(function (x) { return x.id === id; })[0]; return b ? b.title : id; };
+  var keyEl = document.getElementById("key"), out = document.getElementById("out"), msg = document.getElementById("msg");
+  try { keyEl.value = sessionStorage.getItem("hm-admin") || ""; } catch (e) {}
+  function api(body) {
+    body.key = keyEl.value;
+    return fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); });
+  }
+  function load() {
+    msg.textContent = "بنحمّل…";
+    api({ action: "list" }).then(function (x) {
+      if (x.status === 401) { msg.textContent = "كلمة السر غلط."; out.innerHTML = ""; return; }
+      if (!x.ok) { msg.textContent = "حصلت مشكلة، جرّب تاني."; return; }
+      try { sessionStorage.setItem("hm-admin", keyEl.value); } catch (e) {}
+      var html = "", total = 0;
+      Object.keys(x.d).forEach(function (id) {
+        var b = x.d[id]; total += b.reviews.length;
+        html += "<h2>" + esc(title(id)) + " · ♥ " + b.likes + " · ★ " + b.avg + " (" + b.count + ")</h2>";
+        html += b.reviews.length ? b.reviews.map(function (r) {
+          return '<div class="row"><div><b>' + esc(r.name) + "</b> · " + "★".repeat(r.stars) + ' <span class="muted">' + new Date(r.at).toLocaleString("ar-EG") + "</span><p>" + esc(r.text) + '</p></div>' +
+            '<button class="btn btn-small" type="button" data-del="' + esc(id) + "|" + esc(r.rid) + '">امسح</button></div>';
+        }).join("") : '<p class="muted">مفيش تقييمات.</p>';
+      });
+      out.innerHTML = html; msg.textContent = "إجمالي التقييمات: " + total;
+    }).catch(function () { msg.textContent = "مفيش اتصال."; });
+  }
+  document.getElementById("load").addEventListener("click", load);
+  keyEl.addEventListener("keydown", function (e) { if (e.key === "Enter") load(); });
+  out.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-del]"); if (!b) return;
+    var p = b.getAttribute("data-del").split("|");
+    b.disabled = true; b.textContent = "بنمسح…";
+    api({ action: "delete", id: p[0], rid: p[1] }).then(function (x) { if (x.ok) load(); else { b.disabled = false; b.textContent = "امسح"; } });
+  });
+})();
+</script>
+</body>
+</html>

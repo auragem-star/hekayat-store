@@ -224,8 +224,8 @@
   }
   function bookCard(b) {
     return '<article class="book" style="--tint:' + esc(b.tint) + '">' +
-      '<a class="cover-link" href="book.html?id=' + esc(b.id) + '"><img src="' + esc(b.cover) + '" alt="غلاف ' + esc(b.title) + '" loading="lazy" width="420" height="594"></a>' +
-      '<div class="info"><div class="num">' + numLabel(b) + '</div><h3><a href="book.html?id=' + esc(b.id) + '">' + esc(b.title) + '</a></h3><p class="tag">' + esc(b.tagline) + '</p></div>' +
+      '<div class="cover-wrap"><a class="cover-link" href="book.html?id=' + esc(b.id) + '"><img src="' + esc(b.cover) + '" alt="غلاف ' + esc(b.title) + '" loading="lazy" width="420" height="594"></a>' + likeBtn(b, false) + '</div>' +
+      '<div class="info"><div class="num">' + numLabel(b) + '</div><h3><a href="book.html?id=' + esc(b.id) + '">' + esc(b.title) + '</a></h3><p class="tag">' + esc(b.tagline) + '</p><a class="rate" href="book.html?id=' + esc(b.id) + '#reviews" data-rate="' + esc(b.id) + '"></a></div>' +
       '<div class="row"><span class="price">' + money(b.price) + '</span>' +
       '<span style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-small" href="book.html?id=' + esc(b.id) + '">التفاصيل</a>' +
       '<button class="btn btn-small btn-primary" type="button" data-add="' + esc(b.id) + '">أضف للسلة</button></span></div></article>';
@@ -268,7 +268,8 @@
       '<div><div class="num">' + esc(s ? s.name : "") + ' · ' + numLabel(b) + '</div><h1>' + esc(b.title) + '</h1><p class="tag">' + esc(b.tagline) + '</p>' +
       '<ul class="facts"><li>لسن ' + esc(b.age) + '</li><li>' + b.pages + ' صفحة A4</li><li>' + b.storyPages + ' صفحة قصة للتلوين</li><li>ملف PDF تطبعه في البيت</li></ul>' +
       '<p class="summary">' + esc(b.summary) + '</p>' +
-      '<div class="buy"><span class="price">' + money(b.price) + '</span><button class="btn btn-primary" type="button" data-add="' + esc(b.id) + '">أضف للسلة</button></div>' +
+      '<div class="buy"><span class="price">' + money(b.price) + '</span><button class="btn btn-primary" type="button" data-add="' + esc(b.id) + '">أضف للسلة</button>' + likeBtn(b, true) + '</div>' +
+      '<a class="rate rate-big" href="#reviews" data-rate="' + esc(b.id) + '" data-empty="لسه مفيش تقييمات. كن أول واحد يقيّم القصة!"></a>' +
       (s && s.bundle ? '<p class="bundle-hint">أو خد الـ ' + s.bundle.items.length + ' قصص بـ ' + money(s.bundle.price) + ' بس. <a href="#" data-add-bundle-link="' + esc(s.id) + '">أضف الباقة كاملة</a></p>' : '') +
       '</div></div>' +
       '<section class="section" style="padding-top:8px"><div class="section-head"><h2>صفحات من جوه القصة</h2><p>اضغط على أي صفحة علشان تكبّرها.</p></div><div class="gallery">' +
@@ -278,13 +279,118 @@
       '<div class="list-box"><h2>المواقف في القصة</h2>' + li(b.topics) + '</div>' +
       '<div class="list-box"><h2>طفلك هيتعلّم</h2>' + li(b.learns) + '</div>' +
       '<div class="list-box"><h2>وكمان في الكتاب</h2>' + li(b.extras) + '</div></div></section>' +
-      (others.length ? '<section class="section" style="padding-top:0"><div class="section-head"><h2>باقي القصص في السلسلة</h2></div><div class="books">' + others.map(bookCard).join("") + '</div></section>' : '');
+      reviewsSection(b) +
+      (others.length ? '<section class="section" style="padding-top:0"><div class="section-head"><h2>' + (s && s.standalone ? 'قصص منفردة تانية' : 'باقي القصص في السلسلة') + '</h2></div><div class="books">' + others.map(bookCard).join("") + '</div></section>' : '');
+    setupReviews(b);
     var bl = $("[data-add-bundle-link]", host);
     if (bl) bl.addEventListener("click", function (e) {
       e.preventDefault();
       var ser = series(bl.getAttribute("data-add-bundle-link"));
       save(mem.concat(ser.bundle.items.filter(function (i) { return !has(i); })));
       openCart();
+    });
+  }
+
+  /* ---------------- likes and reviews (stored on the server, see /api) */
+  var FB = { sum: {}, liked: {} };
+  try { FB.liked = JSON.parse(localStorage.getItem("hm-liked-v1") || "{}") || {}; } catch (e) { FB.liked = {}; }
+  function saveLiked() { try { localStorage.setItem("hm-liked-v1", JSON.stringify(FB.liked)); } catch (e) { /* private mode */ } }
+  var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.6-4.6-9.4-9.4C1.3 7.6 3.5 4.3 7 4.3c2.1 0 3.8 1.2 5 2.9 1.2-1.7 2.9-2.9 5-2.9 3.5 0 5.7 3.3 4.4 6.8-1.8 4.8-9.4 9.4-9.4 9.4z"/></svg>';
+  function likeBtn(b, big) {
+    return '<button class="like-btn' + (big ? ' big' : '') + '" type="button" data-like="' + esc(b.id) + '" aria-pressed="false" aria-label="عجبتني قصة ' + esc(b.title) + '">' + HEART +
+      (big ? '<span class="lt">عجبتني</span>' : '') + '<span class="lc"></span></button>';
+  }
+  function starsHtml(v) {
+    var out = "";
+    for (var i = 1; i <= 5; i++) out += '<span class="st' + (v >= i - 0.25 ? ' on' : '') + '">★</span>';
+    return '<span class="stars" aria-hidden="true">' + out + '</span>';
+  }
+  var arNum = function (n) { return String(n).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }).replace(".", "٫"); };
+  function paintFeedback() {
+    $$("[data-like]").forEach(function (el) {
+      var id = el.getAttribute("data-like"), n = (FB.sum[id] || {}).likes || 0, on = !!FB.liked[id];
+      el.classList.toggle("on", on); el.setAttribute("aria-pressed", on ? "true" : "false");
+      $(".lc", el).textContent = n ? arNum(n) : "";
+    });
+    $$("[data-rate]").forEach(function (el) {
+      var s = FB.sum[el.getAttribute("data-rate")];
+      if (s && s.count) el.innerHTML = starsHtml(s.avg) + ' <b>' + arNum(s.avg) + '</b> <span>(' + arNum(s.count) + ' تقييم)</span>';
+      else el.innerHTML = el.getAttribute("data-empty") ? esc(el.getAttribute("data-empty")) : "";
+    });
+  }
+  function loadSummary() {
+    if (!window.fetch) return;
+    fetch("/api/feedback").then(function (r) { return r.ok ? r.json() : {}; }).then(function (d) { FB.sum = d || {}; paintFeedback(); }).catch(function () { paintFeedback(); });
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-like]"); if (!b) return;
+    e.preventDefault();
+    var id = b.getAttribute("data-like"), now = !FB.liked[id];
+    if (now) FB.liked[id] = 1; else delete FB.liked[id];
+    saveLiked();
+    var s = FB.sum[id] || (FB.sum[id] = { likes: 0, count: 0, avg: 0 });
+    s.likes = Math.max(0, (s.likes || 0) + (now ? 1 : -1));
+    paintFeedback();
+    if (now && book(id)) toast("حبّيت «" + book(id).title + "» 💛");
+    fetch("/api/like", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: id, liked: now }) })
+      .then(function (r) { return r.json(); }).then(function (d) { if (d && typeof d.likes === "number") { s.likes = d.likes; paintFeedback(); } }).catch(function () { /* keep the local count */ });
+  });
+
+  function reviewsSection(b) {
+    var starsPick = "";
+    for (var i = 1; i <= 5; i++) starsPick += '<button type="button" class="pick" data-v="' + i + '" aria-label="' + i + ' من ٥">★</button>';
+    return '<section class="section" id="reviews" style="padding-top:0"><div class="section-head"><h2>آراء الأهالي</h2><p>جرّبت القصة مع طفلك؟ اكتب رأيك علشان تساعد غيرك يختار.</p></div>' +
+      '<div class="reviews-grid"><div><ul class="rv-list" id="rv-list"><li class="rv-empty">بنحمّل التقييمات…</li></ul></div>' +
+      '<form class="rv-form" id="rv-form" novalidate><h3>اكتب تقييمك</h3>' +
+      '<div class="field"><label>تقييمك للقصة</label><div class="pick-row" role="radiogroup" aria-label="عدد النجوم">' + starsPick + '</div></div>' +
+      '<div class="field"><label for="rv-name">اسمك</label><input id="rv-name" maxlength="30" autocomplete="given-name" placeholder="مثلًا: أم ياسين"></div>' +
+      '<div class="field"><label for="rv-text">رأيك في القصة</label><textarea id="rv-text" maxlength="400" rows="4" placeholder="طفلك حب إيه في القصة؟"></textarea></div>' +
+      '<input type="text" name="website" id="rv-hp" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">' +
+      '<p class="err" id="rv-err" role="alert"></p>' +
+      '<button class="btn btn-primary btn-block" type="submit">ابعت التقييم</button></form></div></section>';
+  }
+  function reviewItem(r) {
+    var d = new Date(r.at), date = "";
+    try { date = d.toLocaleDateString("ar-EG", { day: "numeric", month: "long", year: "numeric" }); } catch (e) { date = ""; }
+    return '<li><div class="rv-top"><b>' + esc(r.name) + '</b>' + starsHtml(r.stars) + '</div><p>' + esc(r.text) + '</p><span class="rv-date">' + esc(date) + '</span></li>';
+  }
+  function setupReviews(b) {
+    var list = $("#rv-list"), form = $("#rv-form"); if (!list || !form) return;
+    var data = { reviews: [] }, picked = 0;
+    function paintList() {
+      list.innerHTML = data.reviews.length ? data.reviews.map(reviewItem).join("") : '<li class="rv-empty">لسه مفيش تقييمات للقصة دي. كن أول واحد يكتب رأيه!</li>';
+    }
+    fetch("/api/feedback?id=" + encodeURIComponent(b.id)).then(function (r) { return r.ok ? r.json() : { reviews: [] }; })
+      .then(function (d) { data = d && d.reviews ? d : { reviews: [] }; paintList(); }).catch(function () { paintList(); });
+    var picks = $$(".pick", form);
+    function paintPicks(v) { picks.forEach(function (p) { p.classList.toggle("on", +p.getAttribute("data-v") <= v); p.setAttribute("aria-checked", +p.getAttribute("data-v") === picked ? "true" : "false"); }); }
+    picks.forEach(function (p) {
+      p.setAttribute("role", "radio");
+      p.addEventListener("click", function () { picked = +p.getAttribute("data-v"); paintPicks(picked); });
+      p.addEventListener("mouseenter", function () { paintPicks(+p.getAttribute("data-v")); });
+      p.addEventListener("mouseleave", function () { paintPicks(picked); });
+    });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var err = $("#rv-err", form), btn = $("button[type=submit]", form);
+      var name = $("#rv-name", form).value.trim(), text = $("#rv-text", form).value.trim();
+      if (!picked) { err.textContent = "اختار عدد النجوم الأول."; return; }
+      if (name.length < 2) { err.textContent = "اكتب اسمك (حرفين على الأقل)."; return; }
+      if (text.length < 3) { err.textContent = "اكتب رأيك في القصة."; return; }
+      err.textContent = ""; btn.disabled = true; btn.textContent = "بنبعت…";
+      fetch("/api/review", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: b.id, name: name, stars: picked, text: text, website: $("#rv-hp", form).value }) })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (x) {
+          btn.disabled = false; btn.textContent = "ابعت التقييم";
+          if (!x.ok || !x.d.ok) { err.textContent = (x.d && x.d.msg) || "حصلت مشكلة، جرّب تاني بعد شوية."; return; }
+          if (x.d.review) { data.reviews.unshift(x.d.review); paintList(); }
+          var s = FB.sum[b.id] || (FB.sum[b.id] = { likes: 0, count: 0, avg: 0 });
+          s.avg = Math.round(((s.avg * s.count) + picked) / (s.count + 1) * 10) / 10; s.count += 1; paintFeedback();
+          form.reset(); picked = 0; paintPicks(0);
+          toast("شكرًا! تقييمك اتنشر 💛");
+        })
+        .catch(function () { btn.disabled = false; btn.textContent = "ابعت التقييم"; err.textContent = "مفيش اتصال بالإنترنت. جرّب تاني."; });
     });
   }
 
@@ -318,6 +424,7 @@
     renderHome();
     renderBook();
     refresh();
+    loadSummary();
     paintHero();
   });
 })();
